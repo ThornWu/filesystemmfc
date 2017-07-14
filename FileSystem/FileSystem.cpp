@@ -5,7 +5,11 @@
 #include "stdafx.h"
 #include "FileSystem.h"
 #include "FileSystemDlg.h"
-#include "Login.h"
+#include "LoginDlg.h"
+#include <iostream>
+#include "file.h"
+#include "manager.h"
+#include <regex>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -37,6 +41,7 @@ CFileSystemApp theApp;
 
 
 // CFileSystemApp 初始化
+static auto && manager = z::Manager::Instance();
 
 BOOL CFileSystemApp::InitInstance()
 {
@@ -74,8 +79,14 @@ BOOL CFileSystemApp::InitInstance()
 	// 例如修改为公司或组织名
 	SetRegistryKey(_T("应用程序向导生成的本地应用程序"));
 
-	CLogin dlg;
+	LoginDlg dlg;
 	m_pMainWnd = &dlg;
+
+	manager.format();
+	z::File test("/home/test/ttt.txt");
+	test.write("Hello", 5);
+	test.close();
+	manager.destory();
 
 
 	INT_PTR nResponse = dlg.DoModal();

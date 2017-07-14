@@ -33,9 +33,6 @@
     <ClInclude Include="Resource.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Login.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="core.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -46,6 +43,12 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="user.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LoginDlg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="SignUpDlg.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
@@ -59,9 +62,6 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Login.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="core.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
@@ -72,6 +72,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="user.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="LoginDlg.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="SignUpDlg.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

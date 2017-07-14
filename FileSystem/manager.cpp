@@ -4,17 +4,22 @@
 #include "file.h"
 
 /////////////////////////////////////////////////////////////////////////////////
-void z::Manager::format()
+bool z::Manager::format()
 {
 	data_area_ = new VDisk(DATA_BLOCK_NUM);
 	inode_area_ = new VDisk(INODE_BLOCK_NUM);
 
 	User root_user = { "root", "root" };
+	users_.clear();
 	signup(root_user);
 	login(root_user);
 
 	auto root_block_id = data_area_->alloc();
 	auto root = DirBlock(data_area_->block(root_block_id));
+
+	for(auto i = 0; i < INODE_NUM; ++i) {
+		memset(reinterpret_cast<char *>(&inodes_[i]), 0, INODE_SIZE);
+	}
 
 	inodes_[0].access(0);
 	inodes_[0].uid(current_user_.id());
@@ -28,12 +33,37 @@ void z::Manager::format()
 	root.add("..", 0);
 
 	mkdir("/home");
+	mkdir("/etc");
+
+	save_users();		// 保存用户信息
+
+	// 保存到虚拟盘
+	vdisk_.close();
+	vdisk_.open("D:/d.fs", std::ios::in | std::ios::out | std::ios::binary);
+	if (!vdisk_.is_open())
+		return false;
+
+	// 写入超级快
+	vdisk_.seekp(0, std::ios::beg);
+	vdisk_.write(super_block_, BLOCK_SIZE);
+
+	// 写入inode节点
+	vdisk_.seekp(BLOCK_SIZE, std::ios::beg);
+	vdisk_.write(reinterpret_cast<char *>(inodes_), INODE_BLOCK_NUM * BLOCK_SIZE);
+
+	// 写入数据和目录
+	vdisk_.seekp(BLOCK_SIZE + INODE_BLOCK_NUM * BLOCK_SIZE, std::ios::beg);
+	vdisk_.write(data_area_->data_, DATA_BLOCK_NUM * BLOCK_SIZE);
+
+	vdisk_.close();
+	return true;
 }
 
 
 /////////////////////////////////////////////////////////////////////////////////
 bool z::Manager::login(std::string name, std::string password)
 {
+	// 匹配登录
 	for(auto user:users_) {
 		if(user.username_ == name && user.password_ == password) {
 			current_user_ = user;
@@ -66,6 +96,46 @@ bool z::Manager::signup(User user)
 	return signup(user.username_, user.password_);
 }
 
+
+void z::Manager::save_users()
+{
+	z::File user_conf("/etc/user.conf", File::in | File::out | File::trunc);
+	for (auto user : users_) {
+		if (user_conf.is_open()) {
+			auto user_string = user.to_string();
+			auto buf = user_string.c_str();
+			user_conf.write(buf, user_string.size());
+		}
+	}
+
+	user_conf.close();
+}
+
+bool z::Manager::load_users()
+{
+	// 加载用户信息
+	z::File user_conf("/etc/user.conf", z::File::in);
+	if (!user_conf.is_open()) {
+		std::cout << "打开用户配置文件失败" << std::endl;
+		return false;
+	}
+
+	users_.clear();
+
+	auto buf = new char[user_conf.size() + 1];
+	memset(buf, 0, user_conf.size() + 1);
+	user_conf.read(buf, user_conf.size());
+
+	std::regex r("<user>\n\t<userid>(\\w+)</userid>\n\t<username>(\\w+)</username>\n\t<password>(\\w+)</password>\n</user>");
+	std::smatch res;
+	auto str = std::string(buf);
+	while (std::regex_search(str, res, r)) {
+		users_.push_back({ res[1], res[2], res[3] });
+		str = res.suffix();
+	}
+
+	return true;
+}
 
 /////////////////////////////////////////////////////////////////////////////////
 char* z::Manager::getFileBlockByInodeId(uint16_t inode_id, uint32_t index) const
@@ -174,6 +244,15 @@ void z::Manager::del(const DirBlock& dir, const std::string& name)
 			auto inode_id = dir.inodeId(i);
 			auto && in = inodes_[inode_id];
 
+			// 如果是链接文件
+			if (in.link_num() > 0) {
+				in.link_num(in.link_num() - 1);
+
+				dir.filename(i, "");
+				dir.inodeId(i, 0);
+				return;
+			}
+
 			// 如果是文件夹
 			if(in.flag() & 0x01) {
 				
@@ -231,43 +310,83 @@ bool z::Manager::rm(const std::string& path)
 
 bool z::Manager::copy(const std::string& src, const std::string& dst)
 {
-	return false;
+	uint16_t src_inode_id = 0;
+	if (!search(Path::split(src), src_inode_id)) return false;
+
+	auto&& src_inode = inodes_[src_inode_id];
+
+	// 文件
+	if(src_inode.is_file()) {
+		touch(dst);
+
+		z::File src_file(src, File::in);
+		auto file_size = src_file.size();
+		auto buf = new char[file_size + 1];
+		memset(buf, 0, file_size + 1);
+		src_file.read(buf, file_size);
+		src_file.close();
+
+		z::File dst_file(dst, File::out);
+		dst_file.write(buf, file_size);
+		dst_file.close();
+	}
+	else {
+		auto dir = DirBlock(getFileBlockByInodeId(src_inode_id, 0));
+		for(auto i = 0; i < 16; ++i) {
+			if(dir.filename(i) != "" && dir.filename(i) != "." && dir.filename(i) != "..") {
+				copy(src + "/" + dir.filename(i), dst + "/" + dir.filename(i));
+			}
+		}
+	}
+
+	return true;
 }
 
 
 bool z::Manager::cp(const std::string& src, const std::string& dst)
 {
-	// 如果源文件不存在则为错误
-	uint16_t inode_id = 0;
-	if (!search(Path::split(src), inode_id)) return false;
+	return copy(src, dst);
+}
+// src 文件或目录
+// dst 必须是目录
+// \ 将新的目录的id指向inode
+// \ 删除原先的目录
+bool z::Manager::mv(const std::string& src, const std::string& dst)
+{
+	if (!exist(src)) return false;
 
-	auto && in = inodes_[inode_id];
 
-	// 如果目标不存在, 创建
-	if(in.flag() & 0x01) {
-		if(!exist(dst)) {
-			mkdirs(dst);
-		}
+	uint16_t src_inode_id = 0;
+	auto src_path_list = Path::split(src);
+	auto src_name = src_path_list.back(); src_path_list.pop_back();  // 获取源文件(夹)名
 
-		//
-		copy(src, dst);
 
-		//
-		auto dir = DirBlock(getFileBlockByInodeId(inode_id, 0));
-		for(auto i = 0; i < 16; ++i) {
-			if(dir.filename(i) != "") {
-				cp(src + "/" + dir.filename(i), dst + "/" + dir.filename(i));
-			}
+	// 父目录
+	if (!search(src_path_list, src_inode_id)) return false;
+	auto src_dir = DirBlock(getFileBlockByInodeId(src_inode_id, 0));
+	
+	// 从父目录中删除源文件(夹)目录，并得到源文件(夹)的inode id
+	auto src_path_inode_id = 0;
+	for(auto i = 0;i < 16; ++i) {
+		if (src_name == src_dir.filename(i)) {
+			src_dir.filename(i, "");
+			src_path_inode_id = src_dir.inodeId(i);
+			src_dir.inodeId(i, 0);
 		}
 	}
-	else {
-		if (!exist(dst)) {
-			touch(dst);
-		}
-		copy(src, dst);
-	}
 
-	return false;
+	// 目的文件夹不存在则创建
+	if (!exist(Path::split(dst))) mkdirs(dst);
+
+	// 找到目标文件夹目录
+	uint16_t dst_inode_id = 0;
+	if (!search(Path::split(dst), dst_inode_id)) return false;
+	auto dst_dir = DirBlock(getFileBlockByInodeId(dst_inode_id, 0));
+
+	// 在目的
+	dst_dir.add(src_name.c_str(), src_path_inode_id);
+
+	return true;
 }
 
 bool z::Manager::mkdir(const std::vector<std::string> path, const std::string file)
@@ -404,7 +523,22 @@ bool z::Manager::exist(const std::string path) const
 	return search(Path::split(path), inode_id);
 }
 
-bool z::Manager::rename(const std::string& path, const std::string& filename)
+void z::Manager::clear(const std::string& cs)
+{
+	uint16_t inode_id = 0;
+	if(!search(Path::split(cs), inode_id))
+		return;
+
+	auto&& in = inodes_[inode_id];
+
+	// 清空文件
+	for(uint32_t i = 0; i < in.block_num(); ++i) {
+		data_area_->add(in.blockId(i));
+	}
+	in.size(0);
+}
+
+bool z::Manager::rename(const std::string& path, const std::string& filename) const
 {
 	auto list = Path::split(path);
 	auto back = list.back();
@@ -444,83 +578,118 @@ void z::Manager::touch(const std::string & path)
 	mkfile(list, filename);
 }
 
-bool z::Manager::write(const std::string path, char* buf)
+int z::Manager::write(const std::string& path, const char* buf, uint32_t start, uint32_t count)
 {
 	uint16_t inode_id;
-	if(search(Path::split(path), inode_id)) {
-		auto&&in = inodes_[inode_id];
+	if (!search(Path::split(path), inode_id))
+		return 0;
 
-		// 如果是文件夹，错误
-		if (in.flag() & 0x01) return false;
+	// 获取文件的inode节点
+	auto&&in = inodes_[inode_id];
 
-		auto len = strlen(buf);
-		in.size(len);
+	// 
+	auto old_blcoks = in.block_num();
+	auto new_blocks = (start + count) / BLOCK_SIZE + ((start + count) % BLOCK_SIZE ? 1 : 0);
 
-		for(uint32_t i = 0; i < in.block_num(); ++i) {
-			auto block_id = data_area_->alloc();
-			in.blockId(i, block_id);
-
-			auto temp_block = data_area_->block(in.blockId(i));
-			memcpy(temp_block, buf + i * 512, len >= 512 ? 512 : len);
-			len -= 512;
+	// 如果原本分配的磁盘不够则分配
+	if (old_blcoks < new_blocks) {
+		in.size(start + count);
+		for (auto i = old_blcoks; i < new_blocks; ++i) {
+			in.blockId(i, data_area_->alloc());
 		}
 	}
-	return true;
-}
 
-bool z::Manager::read(const std::string path, char* buf, uint32_t size)
-{
-	uint16_t inode_id;
-	if (search(Path::split(path), inode_id)) {
-		auto&&in = inodes_[inode_id];
+	in.size(std::max(in.size(), start + count));
 
-		// 如果是文件夹，错误
-		if (in.flag() & 0x01) return false;
+	auto the_first_write_block = true;
+	uint32_t write_count = 0;
 
-		auto len = strlen(buf);
-		in.size(len);
+	// 需要写入的数据块数目
+	auto write_blocks = count / BLOCK_SIZE + (count % BLOCK_SIZE ? 1 : 0);
 
-		if(in.size() > size) {
-			auto read_block = size / BLOCK_SIZE + size % BLOCK_SIZE ? 1 : 0;
-			for (auto i = 0; i < read_block; ++i) {
-				memcpy(buf + i * BLOCK_SIZE, data_area_->block(in.blockId(i)), size > BLOCK_SIZE ? BLOCK_SIZE:size);
-				size -= BLOCK_SIZE;
-			}
+	// 从指定位置开始写入
+	for (auto i = 0; i < write_blocks; ++i) {
+		auto current_block = data_area_->block(in.blockId(start / BLOCK_SIZE + i));
+
+		// 第一块
+		if (the_first_write_block) {
+			the_first_write_block = !the_first_write_block;
+			auto start_pos = start % BLOCK_SIZE;
+			write_count = count > (BLOCK_SIZE - start_pos) ? BLOCK_SIZE - start_pos : count;
+			memcpy(current_block + start_pos, buf, write_count);
+			count -= write_count;
 		}
 		else {
-			auto size_ = in.size();
-			for (uint32_t i = 0; i < in.block_num(); ++i) {
-				memcpy(buf + i * BLOCK_SIZE, data_area_->block(in.blockId(i)), size_ > BLOCK_SIZE ? BLOCK_SIZE : size_);
-				size_ -= BLOCK_SIZE;
-			}
+			memcpy(current_block, buf + write_count, count > BLOCK_SIZE ? BLOCK_SIZE : count);
+			write_count += count > BLOCK_SIZE ? BLOCK_SIZE : count;
+			count -= BLOCK_SIZE;
 		}
 	}
 
-	return false;
+	return write_count;
 }
 
-std::string z::Manager::read(const std::string path)
+int z::Manager::read(const std::string& path, char* const buf, uint32_t start, uint32_t count)
 {
 	uint16_t inode_id;
-	if (search(Path::split(path), inode_id)) {
-		auto&&in = inodes_[inode_id];
+	if (!search(Path::split(path), inode_id))
+		return 0;
 
-		// 如果是文件夹，错误
-		if (in.flag() & 0x01) return "";
+	// 获取inode节点
+	auto&&in = inodes_[inode_id];
 
-		auto size = in.size();
-		auto buf = new char[size + 1];
-		memset(buf, 0, size + 1);
+	uint32_t read_count = 0;
+	auto read_first_block = true;
+	auto read_block_num = count / BLOCK_SIZE + (count % BLOCK_SIZE ? 1 : 0);
+	auto start_block_id = start / BLOCK_SIZE;
 
-		for(uint32_t i = 0; i < in.block_num(); ++i) {
-			memcpy(buf + i * BLOCK_SIZE, data_area_->block(in.blockId(i)), size >= 512 ? 512 : size);
-			size -= 512;
+	for(auto i = 0; i < read_block_num; ++i) {
+		auto current_block = data_area_->block(in.blockId(start_block_id + i));
+
+		if(read_first_block) {
+			read_first_block = !read_first_block;
+			auto start_pos = start % BLOCK_SIZE;
+			read_count = count >(BLOCK_SIZE - start_pos) ? BLOCK_SIZE - start_pos : count;
+			memcpy(buf, current_block + start_pos, read_count);
+			count -= read_count;
 		}
-
-		return buf;
+		else {
+			memcpy(buf + read_count, current_block, count > BLOCK_SIZE ? BLOCK_SIZE : count);
+			read_count += count > BLOCK_SIZE ? BLOCK_SIZE : count;
+			count -= BLOCK_SIZE;
+		}
 	}
 
-	return "";
+	return read_count;
 }
 
+/**
+ * \src 老文件
+ * \dst 新文件
+ */
+bool z::Manager::ln(const std::string& src, const std::string& dst)
+{
+	// 被链接文件不存在则失败
+	uint16_t src_inode_id = 0;
+	if (!search(Path::split(src), src_inode_id)) return false;
 
+	// 链接文件已经创建则失败
+	if (exist(dst)) return false;
+
+	auto list = Path::split(dst);
+	auto dst_name = list.back();
+
+	list.pop_back();
+
+	// 找到新建链接的父目录
+	uint16_t dst_parent_inode_id = 0;
+	if (!search(list, dst_parent_inode_id)) return false;
+
+	auto dir = DirBlock(getFileBlockByInodeId(dst_parent_inode_id, 0));
+	dir.add(dst_name.c_str(), src_inode_id);
+
+	auto&& src_inode = inodes_[src_inode_id];
+	src_inode.link_num(src_inode.link_num() + 1);
+
+	return true;
+}

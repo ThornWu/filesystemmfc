@@ -59,6 +59,7 @@ public:
 	CEdit m_renamefile;
 	afx_msg void OnBnClickedDelefile();
 	void Refresh();
+	afx_msg void OnBnClickedLogout();
 };
 
 

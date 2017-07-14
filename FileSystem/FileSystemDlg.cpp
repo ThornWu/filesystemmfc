@@ -6,11 +6,11 @@
 #include "FileSystem.h"
 #include "FileSystemDlg.h"
 #include "afxdialogex.h"
-#include <iterator>
 #include <iostream>
-#include   <afxpriv.h>
+#include "file.h"
 #include "manager.h"
 #include <regex>
+#include "LoginDlg.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -88,6 +88,7 @@ BEGIN_MESSAGE_MAP(CFileSystemDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_RADIO2, &CFileSystemDlg::OnBnClickedRadio2)
 	ON_BN_CLICKED(RenameFile, &CFileSystemDlg::OnBnClickedRenamefile)
 	ON_BN_CLICKED(DeleFile, &CFileSystemDlg::OnBnClickedDelefile)
+	ON_BN_CLICKED(LOGOUT, &CFileSystemDlg::OnBnClickedLogout)
 END_MESSAGE_MAP()
 
 
@@ -182,27 +183,34 @@ HCURSOR CFileSystemDlg::OnQueryDragIcon()
 
 
 
-
+static auto && manager = z::Manager::Instance();
 
 int CFileSystemDlg::Init()
 {
 
-	auto && manager = z::Manager::Instance();
 
 
 	//声明标识符
 	USES_CONVERSION;
 
-	//调用函数，T2A和W2A均支持ATL和MFC中的字符转换
-	char * username = T2A(this->ChildUser);
-	char * password = T2A(this->ChildPass);
-	//char * pFileName = W2A(str); //也可实现转换
+	std::string s_inputname = (CStringA)this->ChildUser;
+	std::string s_inputpass = (CStringA)this->ChildPass;
 
-	manager.format();
-	manager.signup(username, password);
-	if (!manager.login(username, password)) {
+
+
+
+
+	manager.load_users();
+	if (!manager.login(s_inputname, s_inputpass))
 		return -1;
-	}
+	//	do {
+	//		std::cout << "login$ username:"; std::cin >> username;
+	//		std::cout << "login$ password:"; std::cin >> password;
+	//	} while (!manager.login(username, password));
+
+	
+
+
 
 
 	//std::string username, password;
@@ -213,13 +221,8 @@ int CFileSystemDlg::Init()
 
 
 
-	char * filename = "/home/ice/test/test.txt";
-	manager.touch(filename);
 
-	manager.write(filename, "Hello, world!这是第一次成功！！Hello, world!这是第一次成功！！Hello, world!这是第一次成功！！Hello, world!这是第一次成功！！Hello, world!这是第一次成功！！\
-	Hello, world!这是第一次成功！！Hello, world!这是第一次成功！！Hello, world!这是第一次成功！！Hello, world!这是第一次成功！！Hello, world!这是第一次成功！！Hello, world!这是第一次成功！！\
-	Hello, world!这是第一次成功！！Hello, world!这是第一次成功！！Hello, world!这是第一次成功！！Hello, world!这是第一次成功！！\
-	Hello, world!这是第一次成功！！Hello, world!这是第一次成功！！Hello, world!这是第一次成功！！ffgsd");
+
 
 
 
@@ -336,15 +339,27 @@ void CFileSystemDlg::OnDblclkFilelist(NMHDR *pNMHDR, LRESULT *pResult)
 	
 	// 查看文件
 	else if (size != _T(" ")) {
-		if (manager.exist(pwd + "/" + temp_path)) {
-			std::string text = manager.read(pwd + "/" + temp_path);
-			CString c_text(text.c_str());
-			m_filename.SetWindowTextW(_T("文件名：")+dir);
-			m_readtext.SetWindowTextW(c_text);
-			m_readtext.ShowWindow(SW_SHOW);
-			m_filename.ShowWindow(SW_SHOW);
-			m_closefile.ShowWindow(SW_SHOW);
-		}			
+		z::File file(pwd + "/" + temp_path, z::File::in);
+		if (!file.is_open()) {
+			MessageBox(_T("文件打开失败"));
+			return;
+		}
+		
+
+		auto buf_size = file.size() + 1;
+		auto buf = new char[buf_size];
+		memset(buf, 0, buf_size);
+		file.read(buf, file.size());
+		std::string text = buf;
+
+
+		CString c_text(text.c_str());
+		m_filename.SetWindowTextW(_T("文件名：")+dir);
+		m_readtext.SetWindowTextW(c_text);
+		m_readtext.ShowWindow(SW_SHOW);
+		m_filename.ShowWindow(SW_SHOW);
+		m_closefile.ShowWindow(SW_SHOW);
+		
 	}
 
 	*pResult = 0;
@@ -534,5 +549,35 @@ void CFileSystemDlg::Refresh() {
 		m_list.SetItemText(n, 4, user);
 		n++;
 	}
+
+}
+
+void CFileSystemDlg::OnBnClickedLogout()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	manager.destory();
+	CDialog::OnOK();
+
+	LoginDlg dlg;
+	
+
+
+	INT_PTR nResponse = dlg.DoModal();
+	if (nResponse == IDOK)
+	{
+		// TODO: 在此放置处理何时用
+		//  “确定”来关闭对话框的代码
+	}
+	else if (nResponse == IDCANCEL)
+	{
+
+	}
+	else if (nResponse == -1)
+	{
+		TRACE(traceAppMsg, 0, "警告: 对话框创建失败，应用程序将意外终止。\n");
+		TRACE(traceAppMsg, 0, "警告: 如果您在对话框上使用 MFC 控件，则无法 #define _AFX_NO_MFC_CONTROLS_IN_DIALOGS。\n");
+	}
+
+
 
 }

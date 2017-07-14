@@ -190,9 +190,10 @@
     <ClInclude Include="file.h" />
     <ClInclude Include="FileSystem.h" />
     <ClInclude Include="FileSystemDlg.h" />
-    <ClInclude Include="Login.h" />
+    <ClInclude Include="LoginDlg.h" />
     <ClInclude Include="manager.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="SignUpDlg.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="user.h" />
@@ -202,8 +203,9 @@
     <ClCompile Include="file.cpp" />
     <ClCompile Include="FileSystem.cpp" />
     <ClCompile Include="FileSystemDlg.cpp" />
-    <ClCompile Include="Login.cpp" />
+    <ClCompile Include="LoginDlg.cpp" />
     <ClCompile Include="manager.cpp" />
+    <ClCompile Include="SignUpDlg.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

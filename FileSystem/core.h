@@ -118,6 +118,13 @@ namespace z
 		void blockId(uint32_t offset, uint16_t value) { __OFT__(uint16_t, (32 + offset * 2)) = value; }
 
 
+		/**
+		 * \breif еп╤о
+		 */
+		bool empty() const { return !!size(); }
+		bool is_file() const { return !(flag() & 0x01); }
+		bool is_link() const { return flag() & 0x04; }
+
 #undef LINK_NUM
 #undef MTIME
 #undef CTIME
@@ -186,6 +193,12 @@ namespace z
 			}
 		}
 
+		explicit VDisk(char * data, long num)
+		{
+			block_num_ = num;
+			data_ = data;
+		}
+
 		inline int counter() const { return *(reinterpret_cast<int *>(data_)); }
 		inline void counter(int value) const { *(reinterpret_cast<int *>(data_)) = value; }
 
@@ -243,11 +256,11 @@ namespace z
 		{
 			return data_ + id * 512;
 		}
-
+		char * data_;
 
 	private:
-		char * data_;
-		long block_num_;
+		
+		long block_num_ = 0;
 	};
 
 
