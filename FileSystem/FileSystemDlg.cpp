@@ -11,6 +11,8 @@
 #include "manager.h"
 #include <regex>
 #include "LoginDlg.h"
+#include "SignUpDlg.h"
+#include "MoveFileDlg.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -89,6 +91,9 @@ BEGIN_MESSAGE_MAP(CFileSystemDlg, CDialogEx)
 	ON_BN_CLICKED(RenameFile, &CFileSystemDlg::OnBnClickedRenamefile)
 	ON_BN_CLICKED(DeleFile, &CFileSystemDlg::OnBnClickedDelefile)
 	ON_BN_CLICKED(LOGOUT, &CFileSystemDlg::OnBnClickedLogout)
+	ON_BN_CLICKED(SignUp, &CFileSystemDlg::OnBnClickedSignup)
+	ON_BN_CLICKED(MOVEFILE, &CFileSystemDlg::OnBnClickedMovefile)
+	ON_BN_CLICKED(COPYFILE, &CFileSystemDlg::OnBnClickedCopyfile)
 END_MESSAGE_MAP()
 
 
@@ -188,18 +193,13 @@ static auto && manager = z::Manager::Instance();
 int CFileSystemDlg::Init()
 {
 
-
-
 	//声明标识符
 	USES_CONVERSION;
 
 	std::string s_inputname = (CStringA)this->ChildUser;
 	std::string s_inputpass = (CStringA)this->ChildPass;
 
-
-
-
-
+	
 	manager.load_users();
 	if (!manager.login(s_inputname, s_inputpass))
 		return -1;
@@ -257,44 +257,6 @@ int CFileSystemDlg::Init()
 	CString strTempData1(strData1.c_str());
 	**/
 
-
-
-	/**
-	
-	else if (cmd[0] == "rename") {
-	if (cmd.size() < 3) continue;
-
-	auto temp_path = cmd[1];
-	if (!z::Path::isFullPath(cmd[1])) temp_path = pwd + "/" + cmd[1];
-
-	if (!manager.rename(temp_path, cmd[2]))
-	std::cout << "重命名失败." << std::endl;
-	}
-
-	//删除
-	else if (cmd[0] == "rm") {
-	if (cmd.size() < 2) continue;
-
-	auto temp_path = cmd[1];
-	if (!z::Path::isFullPath(cmd[1])) temp_path = pwd + "/" + cmd[1];
-
-	if (!manager.rm(temp_path))
-	std::cout << "删除失败." << std::endl;
-	}
-	for (std::string::size_type i = 1; i < cmd.size(); ++i) {
-
-	auto temp_path = cmd[1];
-	if (!z::Path::isFullPath(cmd[1])) temp_path = pwd + "/" + cmd[1];
-	manager.mkdirs(temp_path);
-	}
-	}
-	else if (cmd[0] == "help") {
-		std::cout << "\tcp <path> <path> : 复制" << std::endl;
-		std::cout << "\tmv <path> <path> : 移动" << std::endl;
-		std::cout << "\trm <path> : 删除" << std::endl;
-		std::cout << "\trename <path> <path> : 重命名" << std::endl;
-	}
-	**/
 	return 0;
 }
 
@@ -310,6 +272,11 @@ void CFileSystemDlg::OnDblclkFilelist(NMHDR *pNMHDR, LRESULT *pResult)
 	
 	CString dir=m_list.GetItemText(m_Row, 0);
 	CString size = m_list.GetItemText(m_Row,3);
+
+	//双击非单元项目处时直接返回
+	if (m_Row == -1) {
+		return;
+	}
 
 	auto && manager = z::Manager::Instance();
 	std::string temp_path = (CStringA)dir;
@@ -463,6 +430,16 @@ void CFileSystemDlg::OnBnClickedRenamefile()
 	else {
 		CString dir = m_list.GetItemText(nId, 0);
 		std::string pwd = (CStringA)c_pwd;
+
+		if ((c_pwd == _T("/"))&&(dir == _T("etc"))) {
+			MessageBox(_T("当前文件夹受到保护,不能更改"));
+			return;
+		}
+		else if ((c_pwd == _T("/etc")) && (dir == _T("user.conf"))) {
+			MessageBox(_T("当前文件受到保护,不能更改"));
+			return;
+		}
+
 		std::string oldfile = (CStringA)dir;
 		std::string newfile = (CStringA)filename;
 		std::string path = (CStringA)filename;
@@ -549,7 +526,9 @@ void CFileSystemDlg::Refresh() {
 		m_list.SetItemText(n, 4, user);
 		n++;
 	}
-
+	m_readtext.ShowWindow(SW_HIDE);
+	m_filename.ShowWindow(SW_HIDE);
+	m_closefile.ShowWindow(SW_HIDE);
 }
 
 void CFileSystemDlg::OnBnClickedLogout()
@@ -580,4 +559,122 @@ void CFileSystemDlg::OnBnClickedLogout()
 
 
 
+}
+
+
+void CFileSystemDlg::OnBnClickedSignup()
+{
+	SignUpDlg dlg;
+	dlg.currentuser = this->ChildUser;
+
+	INT_PTR nResponse = dlg.DoModal();
+	if (nResponse == IDOK)
+	{
+		// TODO: 在此放置处理何时用
+		//  “确定”来关闭对话框的代码
+	}
+	else if (nResponse == IDCANCEL)
+	{
+
+	}
+	else if (nResponse == -1)
+	{
+		TRACE(traceAppMsg, 0, "警告: 对话框创建失败，应用程序将意外终止。\n");
+		TRACE(traceAppMsg, 0, "警告: 如果您在对话框上使用 MFC 控件，则无法 #define _AFX_NO_MFC_CONTROLS_IN_DIALOGS。\n");
+	}
+	Refresh();
+}
+
+
+void CFileSystemDlg::OnBnClickedMovefile()
+{
+	MoveFileDlg dlg;
+	manager.destory();
+
+	POSITION pos = m_list.GetFirstSelectedItemPosition();
+	if (pos == NULL)
+	{
+		MessageBox(_T("请至少选择一项"));
+		return;
+	}
+	//得到行号，通过POSITION转化
+	int nId = (int)m_list.GetNextSelectedItem(pos);
+	if (nId < 2) {
+		MessageBox(_T("该项不能被修改，请重新选择"));
+		return;
+	}
+
+	CString dir = m_list.GetItemText(nId, 0);
+	dlg.sourcefilename = dir;
+	dlg.c_source = c_pwd;
+
+
+
+	dlg.iscopy = false;
+
+
+
+	INT_PTR nResponse = dlg.DoModal();
+	if (nResponse == IDOK)
+	{
+		// TODO: 在此放置处理何时用
+		//  “确定”来关闭对话框的代码
+	}
+	else if (nResponse == IDCANCEL)
+	{
+
+	}
+	else if (nResponse == -1)
+	{
+		TRACE(traceAppMsg, 0, "警告: 对话框创建失败，应用程序将意外终止。\n");
+		TRACE(traceAppMsg, 0, "警告: 如果您在对话框上使用 MFC 控件，则无法 #define _AFX_NO_MFC_CONTROLS_IN_DIALOGS。\n");
+	}
+	Refresh();
+}
+
+
+void CFileSystemDlg::OnBnClickedCopyfile()
+{
+	MoveFileDlg dlg;
+	manager.destory();
+
+	POSITION pos = m_list.GetFirstSelectedItemPosition();
+	if (pos == NULL)
+	{
+		MessageBox(_T("请至少选择一项"));
+		return;
+	}
+	//得到行号，通过POSITION转化
+	int nId = (int)m_list.GetNextSelectedItem(pos);
+	if (nId < 2) {
+		MessageBox(_T("该项不能被修改，请重新选择"));
+		return;
+	}
+
+	CString dir = m_list.GetItemText(nId, 0);
+	dlg.sourcefilename = dir;
+	dlg.c_source = c_pwd;
+
+
+
+	dlg.iscopy = true;
+
+
+
+	INT_PTR nResponse = dlg.DoModal();
+	if (nResponse == IDOK)
+	{
+		// TODO: 在此放置处理何时用
+		//  “确定”来关闭对话框的代码
+	}
+	else if (nResponse == IDCANCEL)
+	{
+
+	}
+	else if (nResponse == -1)
+	{
+		TRACE(traceAppMsg, 0, "警告: 对话框创建失败，应用程序将意外终止。\n");
+		TRACE(traceAppMsg, 0, "警告: 如果您在对话框上使用 MFC 控件，则无法 #define _AFX_NO_MFC_CONTROLS_IN_DIALOGS。\n");
+	}
+	Refresh();
 }

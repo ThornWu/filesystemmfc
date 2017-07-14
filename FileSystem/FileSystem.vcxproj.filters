@@ -51,6 +51,9 @@
     <ClInclude Include="SignUpDlg.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="MoveFileDlg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FileSystem.cpp">
@@ -78,6 +81,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="SignUpDlg.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="MoveFileDlg.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

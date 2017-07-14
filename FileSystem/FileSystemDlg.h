@@ -60,6 +60,9 @@ public:
 	afx_msg void OnBnClickedDelefile();
 	void Refresh();
 	afx_msg void OnBnClickedLogout();
+	afx_msg void OnBnClickedSignup();
+	afx_msg void OnBnClickedMovefile();
+	afx_msg void OnBnClickedCopyfile();
 };
 
 

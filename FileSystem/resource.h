@@ -10,6 +10,7 @@
 #define IDB_BITMAP1                     149
 #define IDD_LOGIN                       151
 #define IDD_SignUp                      153
+#define IDD_MOVE                        155
 #define PasswordEdit                    1004
 #define UserNameEdit                    1005
 #define UserStatic                      1005
@@ -40,12 +41,15 @@
 #define IDC_RADIO2                      1028
 #define IDC_EDIT5                       1029
 #define IDLOGIN                         1030
+#define MOVEFILE                        1031
+#define MOVEFILE2                       1032
+#define COPYFILE                        1032
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        155
+#define _APS_NEXT_RESOURCE_VALUE        157
 #define _APS_NEXT_COMMAND_VALUE         32771
 #define _APS_NEXT_CONTROL_VALUE         1031
 #define _APS_NEXT_SYMED_VALUE           101

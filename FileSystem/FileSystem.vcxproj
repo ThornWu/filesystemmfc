@@ -192,6 +192,7 @@
     <ClInclude Include="FileSystemDlg.h" />
     <ClInclude Include="LoginDlg.h" />
     <ClInclude Include="manager.h" />
+    <ClInclude Include="MoveFileDlg.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="SignUpDlg.h" />
     <ClInclude Include="stdafx.h" />
@@ -205,6 +206,7 @@
     <ClCompile Include="FileSystemDlg.cpp" />
     <ClCompile Include="LoginDlg.cpp" />
     <ClCompile Include="manager.cpp" />
+    <ClCompile Include="MoveFileDlg.cpp" />
     <ClCompile Include="SignUpDlg.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
