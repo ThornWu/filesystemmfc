@@ -11,6 +11,8 @@
 #define IDD_LOGIN                       151
 #define IDD_SignUp                      153
 #define IDD_MOVE                        155
+#define IDD_NEWFILE                     157
+#define IDD_DIALOG1                     159
 #define PasswordEdit                    1004
 #define UserNameEdit                    1005
 #define UserStatic                      1005
@@ -29,6 +31,7 @@
 #define SignUp                          1018
 #define IDC_EDIT2                       1019
 #define IDC_BUTTON4                     1020
+#define RenameAFile                     1020
 #define IDC_BUTTON5                     1021
 #define RenameFile                      1021
 #define IDC_BUTTON6                     1022
@@ -42,14 +45,14 @@
 #define IDC_EDIT5                       1029
 #define IDLOGIN                         1030
 #define MOVEFILE                        1031
-#define MOVEFILE2                       1032
 #define COPYFILE                        1032
+#define NewFiles                        1033
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        157
+#define _APS_NEXT_RESOURCE_VALUE        161
 #define _APS_NEXT_COMMAND_VALUE         32771
 #define _APS_NEXT_CONTROL_VALUE         1031
 #define _APS_NEXT_SYMED_VALUE           101

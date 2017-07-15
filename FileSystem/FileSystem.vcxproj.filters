@@ -54,6 +54,12 @@
     <ClInclude Include="MoveFileDlg.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="NewFileDlg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="RenameFileDlg.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="FileSystem.cpp">
@@ -84,6 +90,12 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="MoveFileDlg.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="NewFileDlg.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="RenameFileDlg.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

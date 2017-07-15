@@ -49,20 +49,14 @@ public:
 	CEdit m_filename;
 	CButton m_closefile;
 	afx_msg void OnBnClickedClosefile();
-	afx_msg void OnBnClickedNewfile();
-	CEdit m_newfilename;
-	bool isfile;
-	int m_radio;
-	afx_msg void OnBnClickedRadio1();
-	afx_msg void OnBnClickedRadio2();
-	afx_msg void OnBnClickedRenamefile();
-	CEdit m_renamefile;
 	afx_msg void OnBnClickedDelefile();
 	void Refresh();
 	afx_msg void OnBnClickedLogout();
 	afx_msg void OnBnClickedSignup();
 	afx_msg void OnBnClickedMovefile();
 	afx_msg void OnBnClickedCopyfile();
+	afx_msg void OnBnClickedNewfiles();
+	afx_msg void OnBnClickedRenameafile();
 };
 
 
