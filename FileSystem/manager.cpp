@@ -126,6 +126,7 @@ bool z::Manager::load_users()
 	memset(buf, 0, user_conf.size() + 1);
 	user_conf.read(buf, user_conf.size());
 
+	//ÕıÔò
 	std::regex r("<user>\n\t<userid>(\\w+)</userid>\n\t<username>(\\w+)</username>\n\t<password>(\\w+)</password>\n</user>");
 	std::smatch res;
 	auto str = std::string(buf);

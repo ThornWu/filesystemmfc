@@ -1,3 +1,5 @@
-﻿  FileSystemDlg.cpp
+﻿  manager.cpp
+d:\documents\visual studio 2017\projects\filesystem\filesystem\manager.cpp(612): warning C4018: “<”: 有符号/无符号不匹配
+d:\documents\visual studio 2017\projects\filesystem\filesystem\manager.cpp(647): warning C4018: “<”: 有符号/无符号不匹配
   FileSystem.vcxproj -> d:\documents\visual studio 2017\Projects\FileSystem\Debug\FileSystem.exe
   FileSystem.vcxproj -> d:\documents\visual studio 2017\Projects\FileSystem\Debug\FileSystem.pdb (Partial PDB)
